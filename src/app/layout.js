@@ -1,6 +1,9 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { UserProvider } from "@/components/Auth/UserContext";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { MissionProvider } from "@/contexts/MissionContext";
+import { Router } from "react-router-dom";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,8 +26,16 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <AuthProvider>
+      <MissionProvider>
+     <Router>
+
+      
         <UserProvider>{children}</UserProvider>
-        {children}
+        </Router>
+         </MissionProvider>
+    </AuthProvider>
+        
       </body>
     </html>
   );
