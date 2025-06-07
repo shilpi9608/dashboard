@@ -14,7 +14,7 @@ export default function NotFound() {
 
         <div className="space-y-2">
           <h1 className="text-4xl font-bold">404 – Page Not Found</h1>
-          <p className="text-muted-foreground text-lg">We can't find that page.</p>
+          <p className="text-muted-foreground text-lg">We can&apos;t find that page.</p>
         </div>
 
         <Button asChild size="lg">
