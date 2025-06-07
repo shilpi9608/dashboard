@@ -1,86 +1,84 @@
 "use client"
 
-import  React from "react"
+import React, { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
 
 import { AppLayout } from "@/components/app-layout"
-import { useAuth } from "@/components/auth-provider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { createMission } from "@/lib/missions"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
+
+import { auth, db } from "@/lib/firebaseclient"
+import { onAuthStateChanged } from "firebase/auth"
+import { collection, addDoc, serverTimestamp } from "firebase/firestore"
 
 export default function CreateMissionPage() {
-  const { user } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
+
+  // track auth state
+  const [user, setUser] = useState(undefined)
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      if (u) {
+        setUser(u)
+      } else {
+        router.push("/login")
+      }
+    })
+    return () => unsub()
+  }, [router])
+
+  // form state
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
+  const [errors, setErrors] = useState({})
   const [isLoading, setIsLoading] = useState(false)
-  const [errors, setErrors] = useState<{ title }>({})
 
-  const validateForm = () => {
-    const newErrors = {}
-
-    if (!title.trim()) {
-      newErrors.title = "Title is required"
-    }
-
-    if (!description.trim()) {
-      newErrors.description = "Description is required"
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+  const validate = () => {
+    const e = {}
+    if (!title.trim()) e.title = "Title is required"
+    if (!description.trim()) e.description = "Description is required"
+    setErrors(e)
+    return Object.keys(e).length === 0
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-
-    if (!user) {
-      router.push("/login")
-      return
-    }
-
-    if (!validateForm()) {
-      return
-    }
+    if (!user) return
+    if (!validate()) return
 
     setIsLoading(true)
-
     try {
-      createMission(title.trim(), description.trim(), user.email)
-      toast({
-        title: "Mission created!",
-        description: "Your mission has been created successfully.",
+      await addDoc(collection(db, "missions"), {
+        title: title.trim(),
+        description: description.trim(),
+        status: "active",
+        userId: user.uid,
+        userEmail: user.email,
+        createdAt: serverTimestamp(),
       })
+      toast({ title: "Mission created!", description: "Success." })
       router.push("/dashboard")
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create mission. Please try again.",
-        variant: "destructive",
-      })
+    } catch (err) {
+      console.error(err)
+      toast({ title: "Error", description: "Could not create mission", variant: "destructive" })
     } finally {
       setIsLoading(false)
     }
   }
 
-  if (!user) return null
+  // while auth initializes, you might render nothing or a loader
+  if (user === undefined) return null
 
   return (
     <AppLayout>
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Create New Mission</h1>
-          <p className="text-muted-foreground">Add a new mission to track and manage</p>
-        </div>
-
+      <div className="max-w-2xl mx-auto py-8 space-y-6">
+        <h1 className="text-3xl font-bold">Create New Mission</h1>
         <Card>
           <CardHeader>
             <CardTitle>Mission Details</CardTitle>
@@ -91,9 +89,9 @@ export default function CreateMissionPage() {
                 <Label htmlFor="title">Title</Label>
                 <Input
                   id="title"
-                  placeholder="Enter mission title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Enter mission title"
                   className={errors.title ? "border-destructive" : ""}
                 />
                 {errors.title && <p className="text-sm text-destructive">{errors.title}</p>}
@@ -103,13 +101,15 @@ export default function CreateMissionPage() {
                 <Label htmlFor="description">Description</Label>
                 <Textarea
                   id="description"
-                  placeholder="Enter mission description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={4}
+                  placeholder="Enter mission description"
                   className={errors.description ? "border-destructive" : ""}
                 />
-                {errors.description && <p className="text-sm text-destructive">{errors.description}</p>}
+                {errors.description && (
+                  <p className="text-sm text-destructive">{errors.description}</p>
+                )}
               </div>
 
               <div className="flex gap-4">

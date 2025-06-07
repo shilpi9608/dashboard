@@ -1,41 +1,45 @@
 "use client"
 
-import  React from "react"
-
-import { useAuth } from "@/components/auth-provider"
+import React, { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth"
+import { auth } from "@/lib/firebaseclient"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { LayoutDashboardIcon as Dashboard } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const { login, user } = useAuth()
+  const [user, setUser] = useState(null)
   const router = useRouter()
 
   useEffect(() => {
-    if (user) {
-      router.push("/dashboard")
-    }
-  }, [user, router])
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser)
+        router.push("/dashboard")
+      }
+    })
+    return () => unsubscribe()
+  }, [router])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError("")
     setIsLoading(true)
 
-    const success = await login(email, password)
-    if (success) {
-      router.push("/dashboard")
-    } else {
+    try {
+      await signInWithEmailAndPassword(auth, email, password)
+      // onAuthStateChanged will redirect
+    } catch (err) {
       setError("Invalid email or password")
     }
+
     setIsLoading(false)
   }
 
