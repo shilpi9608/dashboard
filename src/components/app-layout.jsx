@@ -1,7 +1,11 @@
 "use client"
 
-import React from "react"
+import React, { useEffect } from "react"
+import { useRouter, usePathname } from "next/navigation"
+import Link from "next/link"
 
+import { auth } from "@/lib/firebaseclient"
+import { signOut, onAuthStateChanged } from "firebase/auth"
 import { useAuth } from "@/components/auth-provider"
 import { Button } from "@/components/ui/button"
 import {
@@ -14,12 +18,10 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { LayoutDashboardIcon as Dashboard, Plus, User } from "lucide-react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { LayoutDashboardIcon as DashboardIcon, Plus, User } from "lucide-react"
 
 const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: Dashboard },
+  { name: "Dashboard", href: "/dashboard", icon: DashboardIcon },
   { name: "Create Mission", href: "/create-mission", icon: Plus },
 ]
 
@@ -31,7 +33,7 @@ function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-2 px-4 py-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Dashboard className="h-4 w-4" />
+            <DashboardIcon className="h-4 w-4" />
           </div>
           <span className="font-semibold">Mission Control</span>
         </div>
@@ -41,7 +43,7 @@ function AppSidebar() {
           {navigation.map((item) => (
             <SidebarMenuItem key={item.name}>
               <SidebarMenuButton asChild isActive={pathname === item.href}>
-                <Link href={item.href}>
+                <Link href={item.href} className="flex items-center gap-2">
                   <item.icon className="h-4 w-4" />
                   <span>{item.name}</span>
                 </Link>
@@ -55,7 +57,23 @@ function AppSidebar() {
 }
 
 export function AppLayout({ children }) {
-  const { user, logout } = useAuth()
+  const { user, setUser } = useAuth()
+  const router = useRouter()
+
+  // redirect to login if not authenticated
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      if (u) setUser(u)
+      else router.push("/login")
+    })
+    return () => unsub()
+  }, [router, setUser])
+
+  const handleLogout = async () => {
+    await signOut(auth)
+    setUser(null)
+    router.push("/login")
+  }
 
   return (
     <SidebarProvider>
@@ -73,7 +91,7 @@ export function AppLayout({ children }) {
                 <User className="h-4 w-4" />
                 <span className="text-sm">{user?.email}</span>
               </div>
-              <Button variant="outline" size="sm" onClick={logout} className="text-slate-900">
+              <Button variant="outline" size="sm" onClick={handleLogout} className="text-slate-900">
                 Sign Out
               </Button>
             </div>

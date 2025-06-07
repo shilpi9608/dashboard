@@ -2,7 +2,11 @@
 
 import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth"
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+} from "firebase/auth"
 import { auth } from "@/lib/firebaseclient"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,12 +14,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { LayoutDashboardIcon as Dashboard } from "lucide-react"
 
-export default function LoginPage() {
+export default function AuthPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [user, setUser] = useState(null)
+  const [isRegister, setIsRegister] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -32,14 +37,15 @@ export default function LoginPage() {
     e.preventDefault()
     setError("")
     setIsLoading(true)
-
     try {
-      await signInWithEmailAndPassword(auth, email, password)
-      // onAuthStateChanged will redirect
+      if (isRegister) {
+        await createUserWithEmailAndPassword(auth, email, password)
+      } else {
+        await signInWithEmailAndPassword(auth, email, password)
+      }
     } catch (err) {
-      setError("Invalid email or password")
+      setError(isRegister ? "Registration failed" : "Invalid email or password")
     }
-
     setIsLoading(false)
   }
 
@@ -52,7 +58,7 @@ export default function LoginPage() {
               <Dashboard className="h-6 w-6" />
             </div>
           </div>
-          <CardTitle className="text-2xl">Log In</CardTitle>
+          <CardTitle className="text-2xl">{isRegister ? "Register" : "Log In"}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -80,9 +86,32 @@ export default function LoginPage() {
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Signing In..." : "Sign In"}
+              {isLoading ? (isRegister ? "Registering..." : "Signing In...") : (isRegister ? "Register" : "Sign In")}
             </Button>
           </form>
+          <div className="mt-4 text-center">
+            {isRegister ? (
+              <p>
+                Already have an account?{' '}
+                <button
+                  className="text-primary underline"
+                  onClick={() => setIsRegister(false)}
+                >
+                  Log In
+                </button>
+              </p>
+            ) : (
+              <p>
+                Don&apos;t have an account?{' '}
+                <button
+                  className="text-primary underline"
+                  onClick={() => setIsRegister(true)}
+                >
+                  Register
+                </button>
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
