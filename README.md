@@ -6,7 +6,7 @@ A responsive mission management platform that simulates task tracking for admins
 
 ### 📸 Demo
 
-> 🔗 [Live Demo](dashboard-beta-lake-81.vercel.app)
+> 🔗 [Live Demo](https://dashboard-beta-lake-81.vercel.app)
 
 ### ✅ Features
 
